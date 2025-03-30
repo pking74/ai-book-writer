@@ -2,12 +2,12 @@
 import os
 from typing import Dict, List
 
-def get_config(local_url: str = "http://localhost:1234/v1") -> Dict:
+def get_config(local_url: str = "http://localhost:11434/api/generate") -> Dict:
     """Get the configuration for the agents"""
     
     # Basic config for local LLM
     config_list = [{
-        'model': 'gemma-3-12b-it',
+        'model': 'gemma-3-12b',
         'base_url': local_url,
         'api_key': "not-needed"
     }]
