@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}OpenTale - Chapter {{ chapter.chapter_number }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h2 class="h4 mb-0">Chapter {{ chapter.chapter_number }}: {{ chapter.title }}</h2>
+                <div>
+                    <a href="/outline" class="btn btn-light btn-sm">&laquo; Back to Outline</a>
+                    {% if chapter.chapter_number > 1 %}
+                    <a href="/chapter/{{ chapter.chapter_number - 1 }}" class="btn btn-light btn-sm">&laquo; Previous Chapter</a>
+                    {% endif %}
+                    {% if chapter.chapter_number < chapters|length %}
+                    <a href="/chapter/{{ chapter.chapter_number + 1 }}" class="btn btn-light btn-sm">Next Chapter &raquo;</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="accordion mb-4" id="chapterAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#outlineCollapse">
+                                        Chapter Outline
+                                    </button>
+                                </h2>
+                                <div id="outlineCollapse" class="accordion-collapse collapse show" data-bs-parent="#chapterAccordion">
+                                    <div class="accordion-body">
+                                        <p>{{ chapter.prompt }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if chapter.chapter_number > 1 %}
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#prevChapterCollapse">
+                                        Previous Chapter Summary
+                                    </button>
+                                </h2>
+                                <div id="prevChapterCollapse" class="accordion-collapse collapse" data-bs-parent="#chapterAccordion">
+                                    <div class="accordion-body">
+                                        <p><em>Automatically includes context from the previous chapter.</em></p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Chat interface for chapter development -->
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h3 class="h5 mb-0">Chapter Development Chat</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="chatMessages" class="p-3 mb-3 border rounded" style="height: 300px; overflow-y: auto;">
+                                    <div class="text-center p-3">
+                                        <p>Share additional details or ask questions about how to develop this chapter. I'll use your input along with the chapter outline to create the content.</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-flex">
+                                    <input type="text" id="userMessage" class="form-control me-2" placeholder="Add details, suggest scenes, or ask questions about this chapter...">
+                                    <button id="sendMessageBtn" class="btn btn-primary">Send</button>
+                                </div>
+                                
+                                <div class="mt-3 d-flex">
+                                    {% if chapter_content %}
+                                    <button type="button" class="btn btn-warning me-2" id="regenerateChapterBtn">Regenerate Chapter</button>
+                                    {% else %}
+                                    <button type="button" class="btn btn-success me-2" id="generateChapterBtn">Generate Chapter</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="alert alert-info">
+                            <strong>Tips for Chapter Development:</strong>
+                            <ul class="small mb-0">
+                                <li>Consider how this chapter advances the overall plot</li>
+                                <li>Focus on character development opportunities</li>
+                                <li>Think about pacing and tension</li>
+                                <li>Add specific scene details or settings</li>
+                                <li>Specify any dialogue or interactions you want included</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="card mt-3">
+                            <div class="card-header bg-info text-white">
+                                Chapter Navigation
+                            </div>
+                            <div class="list-group list-group-flush">
+                                {% for ch in chapters %}
+                                <a href="/chapter/{{ ch.chapter_number }}" 
+                                   class="list-group-item list-group-item-action {% if ch.chapter_number == chapter.chapter_number %}active{% endif %}">
+                                    Chapter {{ ch.chapter_number }}: {{ ch.title }}
+                                </a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="generatingIndicator" class="alert alert-info mt-3 d-none">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border spinner-border-sm me-2" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div>Generating chapter content... This may take several minutes.</div>
+                    </div>
+                </div>
+                
+                <div id="chapterContentContainer" {% if not chapter_content %}class="d-none"{% endif %}>
+                    <form id="saveChapterForm" action="/save_chapter/{{ chapter.chapter_number }}" method="post">
+                        <div class="mb-3">
+                            <h3 class="h5">Chapter Content:</h3>
+                            <textarea class="form-control" id="chapterContent" name="chapter_content" rows="20">{{ chapter_content }}</textarea>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-success" id="saveChapterBtn">Save Chapter</button>
+                            {% if chapter.chapter_number < chapters|length %}
+                            <a href="/chapter/{{ chapter.chapter_number + 1 }}" class="btn btn-primary">Next Chapter &raquo;</a>
+                            {% else %}
+                            <a href="/outline" class="btn btn-primary">Back to Outline</a>
+                            {% endif %}
+                        </div>
+                    </form>
+                    
+                    <div id="savingIndicator" class="alert alert-info mt-3 d-none">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border spinner-border-sm me-2" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <div>Saving chapter...</div>
+                        </div>
+                    </div>
+                    
+                    <div id="savedIndicator" class="alert alert-success mt-3 d-none">
+                        <div>Chapter saved successfully!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // Chat history
+    let chatHistory = [];
+    
+    // Send user message
+    $('#sendMessageBtn').click(function() {
+        sendUserMessage();
+    });
+    
+    // Also send message when user presses Enter
+    $('#userMessage').keypress(function(e) {
+        if (e.which === 13) {
+            sendUserMessage();
+            e.preventDefault();
+        }
+    });
+    
+    function sendUserMessage() {
+        const message = $('#userMessage').val().trim();
+        if (!message) return;
+        
+        // Add user message to chat
+        addMessageToChat('user', message);
+        
+        // Clear input field
+        $('#userMessage').val('');
+        
+        // Update chat history
+        chatHistory.push({role: 'user', content: message});
+        
+        // For simplicity, we'll provide a standard response about using the input for chapter generation
+        const response = "Thanks for the input! I'll incorporate these details when you generate the chapter. Feel free to add more specific requirements or ask questions about the chapter development.";
+        
+        // Add AI response to chat after a short delay to simulate thinking
+        setTimeout(function() {
+            addMessageToChat('ai', response);
+            // Add to chat history
+            chatHistory.push({role: 'ai', content: response});
+        }, 500);
+    }
+    
+    // Generate or regenerate chapter
+    $('#generateChapterBtn, #regenerateChapterBtn').click(function() {
+        $('#generatingIndicator').removeClass('d-none');
+        $(this).prop('disabled', true);
+        
+        // Get any additional context from chat
+        const additionalContext = chatHistory.length > 0 
+            ? "\n\nAdditional user requirements:\n" + 
+              chatHistory.filter(msg => msg.role === 'user')
+                        .map(msg => "- " + msg.content)
+                        .join("\n")
+            : "";
+        
+        $.ajax({
+            type: 'POST',
+            url: '/chapter/{{ chapter.chapter_number }}',
+            data: {
+                additional_context: additionalContext
+            },
+            success: function(response) {
+                $('#chapterContent').val(response.chapter_content);
+                $('#chapterContentContainer').removeClass('d-none');
+                $('#generatingIndicator').addClass('d-none');
+                $('#generateChapterBtn, #regenerateChapterBtn').prop('disabled', false);
+                
+                // Reset chat history after generating
+                chatHistory = [];
+                $('#chatMessages').html('<div class="text-center p-3"><p>Chapter has been generated! You can continue to add details or make changes to refine it further.</p></div>');
+            },
+            error: function() {
+                alert('Error generating chapter. Please try again.');
+                $('#generatingIndicator').addClass('d-none');
+                $('#generateChapterBtn, #regenerateChapterBtn').prop('disabled', false);
+            }
+        });
+    });
+    
+    // Add message to chat display
+    function addMessageToChat(sender, message) {
+        const messageDiv = $('<div>').addClass('mb-3');
+        
+        if (sender === 'user') {
+            messageDiv.addClass('text-end');
+            const messageBubble = $('<div>').addClass('d-inline-block bg-primary text-white p-2 rounded-3')
+                                            .css('max-width', '80%')
+                                            .html(formatMessage(message));
+            messageDiv.append(messageBubble);
+        } else if (sender === 'ai') {
+            messageDiv.addClass('text-start');
+            const messageBubble = $('<div>').addClass('d-inline-block bg-light p-2 rounded-3')
+                                            .css('max-width', '80%')
+                                            .html(formatMessage(message));
+            messageDiv.append(messageBubble);
+        } else {
+            // System message
+            messageDiv.addClass('text-center');
+            const messageBubble = $('<div>').addClass('d-inline-block bg-warning p-2 rounded-3')
+                                            .text(message);
+            messageDiv.append(messageBubble);
+        }
+        
+        $('#chatMessages').append(messageDiv);
+        
+        // Scroll to bottom
+        $('#chatMessages').scrollTop($('#chatMessages')[0].scrollHeight);
+    }
+    
+    // Format message with line breaks
+    function formatMessage(message) {
+        return message.replace(/\n/g, '<br>');
+    }
+    
+    // Save chapter
+    $('#saveChapterForm').submit(function(e) {
+        e.preventDefault();
+        $('#savingIndicator').removeClass('d-none');
+        $('#savedIndicator').addClass('d-none');
+        $('#saveChapterBtn').prop('disabled', true);
+        
+        $.ajax({
+            type: 'POST',
+            url: '/save_chapter/{{ chapter.chapter_number }}',
+            data: $(this).serialize(),
+            success: function() {
+                $('#savingIndicator').addClass('d-none');
+                $('#savedIndicator').removeClass('d-none');
+                $('#saveChapterBtn').prop('disabled', false);
+                
+                // Hide the saved indicator after 3 seconds
+                setTimeout(function() {
+                    $('#savedIndicator').addClass('d-none');
+                }, 3000);
+            },
+            error: function() {
+                alert('Error saving chapter. Please try again.');
+                $('#savingIndicator').addClass('d-none');
+                $('#saveChapterBtn').prop('disabled', false);
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 
