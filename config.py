@@ -2,14 +2,14 @@
 import os
 from typing import Dict, List
 
-def get_config(local_url: str = "http://localhost:11434/api/generate") -> Dict:
+def get_config(local_url: str = "https://openrouter.ai/api/v1") -> Dict:
     """Get the configuration for the agents"""
     
     # Basic config for local LLM
     config_list = [{
-        'model': 'gemma-3-12b',
+        'model': 'google/gemma-3-27b-it',
         'base_url': local_url,
-        'api_key': "not-needed"
+        'api_key': "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"
     }]
 
     # Common configuration for all agents
